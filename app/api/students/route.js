@@ -4,22 +4,23 @@ import pool from '@/lib/db';
 // GET: Sabhi students aur stats fetch karna
 export async function GET() {
   try {
-    const [rows] = await pool.query('SELECT * FROM students ORDER BY id DESC');
+    const studentsResult = await pool.query('SELECT * FROM students ORDER BY id DESC');
+    const students = studentsResult.rows;
     
-    const [totalCountRows] = await pool.query('SELECT COUNT(*) as total FROM students');
-    const [activeCountRows] = await pool.query("SELECT COUNT(*) as active FROM students WHERE status = 'Active'");
-    const [frozenCountRows] = await pool.query("SELECT COUNT(*) as frozen FROM students WHERE status = 'Frozen'");
-    const [maleCountRows] = await pool.query("SELECT COUNT(*) as male FROM students WHERE gender = 'Male'");
-    const [femaleCountRows] = await pool.query("SELECT COUNT(*) as female FROM students WHERE gender = 'Female'");
+    const totalResult = await pool.query('SELECT COUNT(*) as total FROM students');
+    const activeResult = await pool.query("SELECT COUNT(*) as active FROM students WHERE status = 'Active'");
+    const frozenResult = await pool.query("SELECT COUNT(*) as frozen FROM students WHERE status = 'Frozen'");
+    const maleResult = await pool.query("SELECT COUNT(*) as male FROM students WHERE gender = 'Male'");
+    const femaleResult = await pool.query("SELECT COUNT(*) as female FROM students WHERE gender = 'Female'");
 
     return NextResponse.json({
-      students: rows,
+      students: students,
       stats: {
-        total: totalCountRows?.[0]?.total || 0,
-        active: activeCountRows?.[0]?.active || 0,
-        frozen: frozenCountRows?.[0]?.frozen || 0,
-        male: maleCountRows?.[0]?.male || 0,
-        female: femaleCountRows?.[0]?.female || 0,
+        total: parseInt(totalResult.rows?.[0]?.total || 0),
+        active: parseInt(activeResult.rows?.[0]?.active || 0),
+        frozen: parseInt(frozenResult.rows?.[0]?.frozen || 0),
+        male: parseInt(maleResult.rows?.[0]?.male || 0),
+        female: parseInt(femaleResult.rows?.[0]?.female || 0),
       }
     });
   } catch (error) {
@@ -35,7 +36,8 @@ export async function POST(req) {
 
     const query = `
       INSERT INTO students (reg_no, student_name, father_name, contact_1, contact_2, class, section, gender, house, status) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING id;
     `;
     
     const values = [
@@ -51,9 +53,9 @@ export async function POST(req) {
       status || 'Active'
     ];
 
-    const [result] = await pool.query(query, values);
+    const result = await pool.query(query, values);
 
-    return NextResponse.json({ success: true, id: result.insertId });
+    return NextResponse.json({ success: true, id: result.rows[0].id });
   } catch (error) {
     return NextResponse.json({ error: error.message || 'Failed to insert student' }, { status: 500 });
   }
@@ -71,8 +73,8 @@ export async function PUT(req) {
 
     const query = `
       UPDATE students 
-      SET reg_no = ?, student_name = ?, father_name = ?, contact_1 = ?, contact_2 = ?, class = ?, section = ?, gender = ?, house = ?, status = ? 
-      WHERE id = ?
+      SET reg_no = $1, student_name = $2, father_name = $3, contact_1 = $4, contact_2 = $5, class = $6, section = $7, gender = $8, house = $9, status = $10 
+      WHERE id = $11
     `;
     
     const values = [
@@ -107,7 +109,7 @@ export async function DELETE(req) {
       return NextResponse.json({ error: 'Student ID is required' }, { status: 400 });
     }
 
-    await pool.query('DELETE FROM students WHERE id = ?', [id]);
+    await pool.query('DELETE FROM students WHERE id = $1', [id]);
 
     return NextResponse.json({ success: true });
   } catch (error) {
