@@ -10,9 +10,8 @@ export async function GET() {
     const totalResult = await pool.query('SELECT COUNT(*) as total FROM students');
     const activeResult = await pool.query("SELECT COUNT(*) as active FROM students WHERE status = 'Active'");
     const frozenResult = await pool.query("SELECT COUNT(*) as frozen FROM students WHERE status = 'Frozen'");
-    const maleResult = await pool.query("SELECT COUNT(*) as male FROM students WHERE gender = 'Male'");
-    const femaleResult = await pool.query("SELECT COUNT(*) as female FROM students WHERE gender = 'Female'");
-
+const maleResult = await pool.query("SELECT COUNT(*) as male FROM students WHERE LOWER(TRIM(gender)) = 'male'");
+    const femaleResult = await pool.query("SELECT COUNT(*) as female FROM students WHERE LOWER(TRIM(gender)) = 'female'");
     return NextResponse.json({
       students: students,
       stats: {
